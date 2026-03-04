@@ -1,0 +1,48 @@
+# Mini-RAG Project Analysis
+
+Your project is an excellent example of a clean, structured [FastAPI](https://fastapi.tiangolo.com/) application designed for Retrieval-Augmented Generation (RAG). By separating **routing** from **business logic**, it makes the code easy to maintain and expand.
+
+Here is a breakdown of the core components and files to aid in your understanding:
+
+## 1. Application Entry Point ([main.py](file:///d:/mini-rag/src/main.py))
+This is where the API server starts. It initializes the FastAPI `app` and registers (includes) your routers. Think of it as the central switchboard that connects all the different API endpoints together.
+
+## 2. Routes (`routes/` directory)
+Routes define your API endpoints (`GET`, `POST`, etc.) and handle the HTTP requests and responses. They acts as the bridge between the client (like a web browser or Postman) and your controllers.
+
+*   [routes/base.py](file:///d:/mini-rag/src/routes/base.py): Defines a simple "welcome" endpoint at `/api/v1/`. This is essentially a health check to verify the API is running.
+*   [routes/data.py](file:///d:/mini-rag/src/routes/data.py): The core endpoints of your app:
+    *   `/upload/{project_id}`: Takes a file from the user and passes it to the [DataController](file:///d:/mini-rag/src/controllers/DataController.py#9-48) to be saved.
+    *   `/process/{project_id}`: Takes a processing request and tells the [ProcessController](file:///d:/mini-rag/src/controllers/ProcessController.py#10-58) to extract text from the uploaded file and break it into overlapping chunks.
+*   [routes/schemas/data.py](file:///d:/mini-rag/src/routes/schemas/data.py): Contains **Pydantic Models** like [ProcessRequest](file:///d:/mini-rag/src/routes/schemas/data.py#4-9). These models define exactly what data format the API expects from the user in a request body, ensuring type safety.
+
+## 3. Controllers (`controllers/` directory)
+Controllers house the **business logic**. Instead of writing complex document processing code directly in your routes, you pass the data to controllers. This keeps your routes clean and makes the logic reusable.
+
+*   [BaseController.py](file:///d:/mini-rag/src/controllers/BaseController.py): Provide shared functionality for all other controllers. For example, it manages the central `assets/files` path, loads the `settings`, and can generate random strings.
+*   [ProjectController.py](file:///d:/mini-rag/src/controllers/ProjectController.py): Inherits from [BaseController](file:///d:/mini-rag/src/controllers/BaseController.py#7-16). Its specific job is to manage project workspaces. It creates a dedicated directory inside `assets/files` for each unique `project_id`.
+*   [DataController.py](file:///d:/mini-rag/src/controllers/DataController.py): Inherits from [BaseController](file:///d:/mini-rag/src/controllers/BaseController.py#7-16). Handles file management:
+    *   Validates file types and sizes.
+    *   Cleans file names (removing spaces and special characters) and prepends a random string to guarantee uniqueness before saving them to the project directory.
+*   [ProcessController.py](file:///d:/mini-rag/src/controllers/ProcessController.py): Inherits from [BaseController](file:///d:/mini-rag/src/controllers/BaseController.py#7-16). Handles the "RAG" data extraction logic:
+    *   It uses `LangChain` to load [.txt](file:///d:/mini-rag/dummy.txt) or `.pdf` files.
+    *   It uses a `RecursiveCharacterTextSplitter` to break the loaded text into smaller, overlapping "chunks". This chunking is a vital step in RAG so that you only pass the most relevant snippets to an AI later.
+
+## 4. Models and Enums (`models/` directory)
+This directory stores constants and standard data definitions. Using Enum classes prevents "magic strings" and typo-related bugs across the codebase.
+
+*   [models/enums/ResponseEnum.py](file:///d:/mini-rag/src/models/enums/ResponseEnum.py): Defines standard response messages (e.g., `FILE_UPLOADED_SUCCESSFULLY`, `FILE_SIZE_ERROR`). This ensures your API responses are consistent.
+*   [models/enums/ProcessingEnum.py](file:///d:/mini-rag/src/models/enums/ProcessingEnum.py): Defines the currently supported file extensions ([.txt](file:///d:/mini-rag/dummy.txt) and `.pdf`).
+
+## 5. Configuration & Requirements
+*   `helpers/config.py` & [.env](file:///d:/mini-rag/src/.env): These manage your environment variables (like max file sizes or app version). By using Pydantic `Settings`, it validates the config when the app starts.
+*   [requirements.txt](file:///d:/mini-rag/src/requirements.txt): Defines your dependencies, notably `fastapi`, `uvicorn` (the server), `aiofiles` (for async file saving), and `langchain` / `PyMuPDF` (for loading and chunking documents).
+
+## How to Memorize & Replicate this Structure
+
+When building a similar project, you can recreate this architecture by answering these questions step-by-step:
+1.  **Configuration**: What environment rules do I need? (_Create [.env](file:///d:/mini-rag/src/.env) and `helpers/config.py`_)
+2.  **Enums/Schemas**: What standard labels and input formats will my API use? (_Create `models/enums/` and `routes/schemas/`_)
+3.  **Controllers**: What actual actions does the app perform? E.g., handling files, querying a database. (_Create `controllers/` and abstract the logic into classes_)
+4.  **Routes**: How do users ask the app to perform those actions? (_Create `routes/` and link them to the controllers_)
+5.  **Main**: How do I glue it all together? (_Write [main.py](file:///d:/mini-rag/src/main.py)_)
